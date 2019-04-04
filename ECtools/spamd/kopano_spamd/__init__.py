@@ -1,17 +1,19 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 # SPDX-License-Identifier: AGPL-3.0-or-later
 from .version import __version__
 
-from contextlib import closing
-import grp
-import os
 import sys
+import os
 import time
-
-import bsddb3 as bsddb
-
 import kopano
+import grp
 from kopano import Config, log_exc
+from contextlib import closing
+
+if sys.hexversion >= 0x03000000:
+    import bsddb3 as bsddb
+else: # pragma: no cover
+    import bsddb
 
 """
 kopano-spamd - ICS driven spam learning daemon for Kopano / SpamAssasin
@@ -108,7 +110,7 @@ class Importer:
             self.mark_spam(searchkey)
 
 def main():
-    parser = kopano.parser('CKQSFl')  # select common cmd-line options
+    parser = kopano.parser('ckpsFl')  # select common cmd-line options
     options = parser.parse_args()[0]
     service = Service('spamd', config=CONFIG, options=options)
     if service.config['learn_ham'] == True and not os.path.exists(service.config['ham_dir']):
