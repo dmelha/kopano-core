@@ -92,6 +92,44 @@ class Importer:
 
                 self.log.info("Learning message as HAM, entryid: %s", item.entryid)
                 self.learn(item, searchkey, False)
+            
+            # handle the case when msg is now NOT in junk but WAS tagged as spam by SA
+            #   and it was previously unknown to kopano-spamd-DB (self.spamdb)
+            elif item.folder != item.store.junk and \
+                    self.learnham and item.header('x-spam-flag') == 'YES' and \
+                    not self.was_spam(searchkey):
+
+                self.log.info("Learning prev. unknown message as HAM, entryid: %s", item.entryid)
+                self.learn(item, False)
+            
+            # msg is now in Junk(again), was originally tagged by SA and was previously NOT known by us as spam
+            # scenario: user moved SA-tagged msg from junk to inbox  and now reversed his move
+            elif item.folder == item.store.junk and \
+                    item.header('x-spam-flag') == 'YES' and \
+                    not self.was_spam(searchkey):
+
+                self.log.info("Learning prev. unknown message as SPAM, entryid: %s", item.entryid)
+                self.learn(item, searchkey, True)
+
+            # msg is now in Junk(again), was originally tagged by SA and was previously KNOWN by us as spam
+            # scenario: user moved SA-tagged msg from junk to inbox, reversed his move,reversed again and again, ...
+            elif item.folder == item.store.junk and \
+                    item.header('x-spam-flag') == 'YES' and \
+                    self.was_spam(searchkey):
+                    #not self.was_spam(searchkey):
+                
+                fn = os.path.join(self.hamdir, searchkey + '.eml')
+                if os.path.isfile(fn):
+                    os.unlink(fn)
+                
+                self.log.info("Learning prev. known message as SPAM, entryid: %s", item.entryid)
+                self.learn(item, searchkey, True)
+
+            else:
+                self.log_info("doing nothing...")
+
+
+
 
     def learn(self, item, searchkey, spam):
         spameml = item.eml()
